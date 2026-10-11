@@ -1,0 +1,6 @@
+# Allow all standard web crawlers full access to the site
+User-agent: *
+Allow: /
+
+# Sitemap reference for crawlers
+Sitemap: https://projectpal.app/sitemap.xml
