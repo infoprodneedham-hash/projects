@@ -1257,7 +1257,7 @@
   }
   .pms-modal-card {
     background: #ffffff;
-    max-width: 580px;
+    max-width: 600px;
     width: 100%;
     border-radius: 16px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -1301,12 +1301,26 @@
     font-weight: 600;
     margin-bottom: 0.75rem;
   }
+  .pms-info-box {
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+    padding: 0.85rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.85rem;
+    color: #065f46;
+  }
+  .pms-info-box strong {
+    color: #064e3b;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
   .pms-disclaimer-box {
     background: #fffbeb;
     border-left: 4px solid #f59e0b;
     padding: 0.85rem 1rem;
     border-radius: 0 8px 8px 0;
-    margin-top: 1.25rem;
+    margin-top: 1rem;
     font-size: 0.825rem;
     color: #92400e;
   }
@@ -1318,9 +1332,26 @@
   .pms-modal-footer {
     padding: 1rem 1.75rem 1.5rem;
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
     background: #f8fafc;
     border-top: 1px solid #e2e8f0;
+    gap: 1rem;
+  }
+  .pms-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #64748b;
+    cursor: pointer;
+    user-select: none;
+  }
+  .pms-checkbox-label input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #2563eb;
+    cursor: pointer;
   }
   .pms-btn-primary {
     background: #2563eb;
@@ -1333,6 +1364,7 @@
     cursor: pointer;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
     transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
   }
   .pms-btn-primary:hover {
     background: #1d4ed8;
@@ -1376,7 +1408,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    transition: background 0.2s, transform 0.2s;
+    transition: background 0.2s;
   }
   .pms-social-tab-btn:hover {
     background: #2563eb;
@@ -1440,7 +1472,7 @@
     color: #ffffff;
     font-size: 0.9rem;
     font-weight: 500;
-    transition: filter 0.2s, transform 0.1s;
+    transition: filter 0.2s;
     border: none;
     cursor: pointer;
     width: 100%;
@@ -1561,24 +1593,31 @@
         <h2>Welcome to the Project Management Suite</h2>
       </div>
       <div class="pms-modal-body">
-        <span class="pms-badge-tag">Offline-First • Local Storage</span>
+        <span class="pms-badge-tag">Offline-First • Local IndexedDB • Portable</span>
         <p>
-          <strong>Welcome! Please enjoy this project management suite.</strong>
+          <strong>Welcome, please enjoy this project management suite.</strong>
         </p>
         <p>
-          This application is designed specifically for solopreneurs, independent contractors, small teams, and project coordinators who need a fast, zero-bloat system to plan multi-stage deliverables, estimate task hours across days, and maintain strict stage workflows.
+          This application is designed specifically for solopreneurs, independent contractors, small teams, and project coordinators who need a clear, reliable system to manage stage-by-stage workflows, allocate estimated task hours across multiple days, and maintain project accountability.
         </p>
-        <p>
-          Everything you create is managed directly in your browser using <strong>IndexedDB</strong>. Your data never leaves your machine unless you explicitly export snapshots or download the offline archive.
-        </p>
+
+        <!-- ZIP & Snapshots Feature Notice -->
+        <div class="pms-info-box">
+          <strong>📦 Offline App & Snapshots Usage</strong>
+          Use the <strong>"Download (file.zip)"</strong> button to download the entire application as a standalone HTML file. This allows you to store the app locally, transfer it to any other machine or drive, and run it completely offline. You can use this downloaded app in conjunction with your saved <strong>JSON or CSV snapshots</strong> to restore, migrate, or back up your complete project database anytime on any device.
+        </div>
 
         <!-- Usage Disclaimer -->
         <div class="pms-disclaimer-box">
           <strong>⚠️ Usage Disclaimer</strong>
-          This software is provided "as is" for organizational, planning, and task management purposes without warranties of any kind. As all operational data resides entirely within your local browser storage, please ensure you regularly download a JSON or CSV snapshot to prevent unintended data loss from browser cache clearing or hardware changes.
+          This suite is provided "as is" for organizational, planning, and task estimation purposes. All data is stored locally in your browser's IndexedDB and never uploaded to any external cloud. Please take regular JSON or CSV snapshots to prevent unintended data loss from browser cache resets or hardware changes.
         </div>
       </div>
       <div class="pms-modal-footer">
+        <label class="pms-checkbox-label">
+          <input type="checkbox" id="pms-dont-show-again">
+          <span>Don't show this welcome message again</span>
+        </label>
         <button id="pms-dismiss-welcome-btn" class="pms-btn-primary">
           Enter Application
         </button>
@@ -1670,16 +1709,19 @@
     // --- 1. Welcome Modal Logic ---
     const overlay = document.getElementById('pms-welcome-overlay');
     const dismissBtn = document.getElementById('pms-dismiss-welcome-btn');
-    const STORAGE_KEY = 'pms_welcome_seen_v1';
+    const dontShowCheckbox = document.getElementById('pms-dont-show-again');
+    const STORAGE_KEY = 'pms_welcome_permanently_dismissed';
 
-    // Show modal if not previously acknowledged
+    // Show by default on every load, UNLESS permanently dismissed via checkbox
     if (localStorage.getItem(STORAGE_KEY) === 'true') {
       overlay.classList.add('pms-hidden');
     }
 
     dismissBtn.addEventListener('click', () => {
       overlay.classList.add('pms-hidden');
-      localStorage.setItem(STORAGE_KEY, 'true');
+      if (dontShowCheckbox.checked) {
+        localStorage.setItem(STORAGE_KEY, 'true');
+      }
     });
 
     // --- 2. Shared Drawer Backdrop Management ---
