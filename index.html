@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniPlan Pro - Project Management Suite</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- JSZip for offline packaging -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a; /* Slate 900 */
+      color: #f8fafc;
+    }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .badge-limit {
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-indigo-600 selection:text-white">
+
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-4 sm:px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- App Brand -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-sky-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i class="fa-solid fa-layer-group text-lg text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-bold tracking-tight text-white">OmniPlan Pro</h1>
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/60">Offline IndexedDB</span>
+          </div>
+          <p class="text-xs text-slate-400">Structured 8-Project / 5-Stage / 6-Task Workflow Manager</p>
+        </div>
+      </div>
+
+      <!-- Action buttons & Auto-save status -->
+      <div class="flex items-center flex-wrap gap-2">
+        <div id="saveIndicator" class="flex items-center text-xs font-medium text-emerald-400 mr-2 bg-emerald-950/60 border border-emerald-800/50 px-2.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid fa-circle-check mr-1.5 text-xs animate-pulse"></i>
+          <span>Synced to IndexedDB</span>
+        </div>
+
+        <!-- Google Sheets Export -->
+        <button id="btnExportSheet" class="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-emerald-600/90 hover:bg-emerald-600 text-white rounded-lg transition shadow hover:shadow-emerald-500/20" title="Export current project formatted for Google Sheets">
+          <i class="fa-solid fa-file-csv mr-1.5"></i> Sheets CSV
+        </button>
+
+        <!-- Backup & Snapshot Menu Button -->
+        <button id="btnBackupModal" class="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition" title="Backup or Restore database snapshot">
+          <i class="fa-solid fa-database mr-1.5 text-indigo-400"></i> Snapshots
+        </button>
+
+        <!-- Download ZIP button -->
+        <button id="btnDownloadZip" class="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-lg transition shadow-md shadow-indigo-600/30">
+          <i class="fa-solid fa-file-zipper mr-1.5"></i> Download (file.zip)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
+    <!-- Projects Switcher & Management Bar -->
+    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 shadow-xl">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold tracking-wide uppercase text-indigo-400">Projects Portfolio</span>
+            <span id="projectCountBadge" class="badge-limit px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">1 / 8 Projects</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Switch between active projects or initialize up to 8 distinct workspaces.</p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button id="btnNewProject" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed shadow">
+            <i class="fa-solid fa-plus mr-1.5"></i> New Project
+          </button>
+          <button id="btnDeleteProject" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed">
+            <i class="fa-solid fa-trash-can mr-1.5"></i> Delete Current Project
+          </button>
+        </div>
+      </div>
+
+      <!-- Project Tabs List -->
+      <div id="projectTabsList" class="flex items-center gap-2 overflow-x-auto pt-3 pb-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Active Project Overview Summary Card -->
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex-1">
+        <div class="flex items-center gap-3">
+          <input id="currentProjectTitleInput" type="text" class="bg-slate-800/70 hover:bg-slate-800 focus:bg-slate-950 border border-slate-700 focus:border-indigo-500 text-lg font-bold text-white rounded-lg px-3 py-1.5 transition outline-none w-full max-w-md" placeholder="Project Name">
+          <span id="stageCapacityBadge" class="badge-limit px-2.5 py-1 rounded-md bg-slate-800 text-indigo-300 border border-slate-700 font-semibold whitespace-nowrap">
+            Stages: 1 / 5
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1.5">
+          Click the title above to rename. Stage deletions strictly enforce that all enclosed tasks are deleted first.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 text-xs bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+        <div>
+          <div class="text-slate-400">Total Stages</div>
+          <div id="statTotalStages" class="text-base font-bold text-white">0</div>
+        </div>
+        <div class="h-8 w-px bg-slate-800"></div>
+        <div>
+          <div class="text-slate-400">Total Tasks</div>
+          <div id="statTotalTasks" class="text-base font-bold text-white">0</div>
+        </div>
+        <div class="h-8 w-px bg-slate-800"></div>
+        <div>
+          <div class="text-slate-400">Total Est. Hours</div>
+          <div id="statTotalHours" class="text-base font-bold text-indigo-400">0.0 hrs</div>
+        </div>
+        <div class="h-8 w-px bg-slate-800"></div>
+        <div>
+          <div class="text-slate-400">Completion</div>
+          <div id="statTaskProgress" class="text-base font-bold text-emerald-400">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <h2 class="text-base font-semibold text-slate-200">Execution Stages</h2>
+        <span class="text-xs text-slate-500">(Max 5 stages allowed per project)</span>
+      </div>
+      <button id="btnAddStage" class="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed shadow">
+        <i class="fa-solid fa-layer-group mr-1.5"></i> Add Stage
+      </button>
+    </div>
+
+    <!-- Container where stages are rendered -->
+    <div id="stagesContainer" class="flex flex-col gap-6">
+      <!-- Stages will be inserted here -->
+    </div>
+  </main>
+
+  <div id="snapshotModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-950 flex items-center justify-center text-indigo-400 border border-indigo-800">
+            <i class="fa-solid fa-floppy-disk text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-white">Database Snapshot & Restore</h3>
+            <p class="text-xs text-slate-400">Export all projects or migrate data to other devices</p>
+          </div>
+        </div>
+        <button id="btnCloseSnapshotModal" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-5 py-4">
+        <!-- Export Segment -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80">
+          <h4 class="text-sm font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-export text-indigo-400"></i> Export Snapshot
+          </h4>
+          <p class="text-xs text-slate-400 mb-3">Download complete IndexedDB data bundle across all current projects.</p>
+          <div class="flex gap-2">
+            <button id="btnExportJSON" class="flex-1 py-2 px-3 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 flex items-center justify-center gap-2 transition">
+              <i class="fa-solid fa-code"></i> JSON Snapshot
+            </button>
+            <button id="btnExportCSVAll" class="flex-1 py-2 px-3 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 flex items-center justify-center gap-2 transition">
+              <i class="fa-solid fa-table"></i> All Projects CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Restore Segment -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80">
+          <h4 class="text-sm font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-import text-amber-400"></i> Restore from File
+          </h4>
+          <p class="text-xs text-slate-400 mb-3">Upload a JSON or structured CSV snapshot file to restore projects into IndexedDB.</p>
+          <div class="flex items-center gap-2">
+            <input type="file" id="restoreFileInput" accept=".json,.csv" class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-950 file:text-indigo-300 hover:file:bg-indigo-900 cursor-pointer border border-slate-800 rounded-lg p-1 bg-slate-900" />
+            <button id="btnExecuteRestore" class="py-2 px-4 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition whitespace-nowrap">
+              Restore
+            </button>
+          </div>
+          <div id="restoreFeedback" class="text-xs mt-2 hidden"></div>
+        </div>
+      </div>
+
+      <div class="pt-2 text-right">
+        <button id="btnCloseSnapshotFooter" class="px-4 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 flex items-center gap-3 bg-slate-900 border border-slate-700 text-slate-200 px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <div id="toastIcon" class="text-indigo-400"><i class="fa-solid fa-info-circle"></i></div>
+    <div id="toastMessage" class="text-xs font-medium">Notification message</div>
+  </div>
+
+  <script>
+    const DB_NAME = 'ProjectPlannerDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'projects';
+
+    const MAX_PROJECTS = 8;
+    const MAX_STAGES = 5;
+    const MAX_TASKS = 6;
+
+    let dbInstance = null;
+    let appProjects = [];
+    let activeProjectId = null;
+
+    // Toast Notification Utility (no window.alert allowed)
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toastNotification');
+      const toastIcon = document.getElementById('toastIcon');
+      const toastMsg = document.getElementById('toastMessage');
+
+      let iconClass = 'fa-solid fa-circle-info text-indigo-400';
+      if (type === 'success') iconClass = 'fa-solid fa-circle-check text-emerald-400';
+      if (type === 'warning') iconClass = 'fa-solid fa-triangle-exclamation text-amber-400';
+      if (type === 'error') iconClass = 'fa-solid fa-circle-xmark text-rose-400';
+
+      toastIcon.innerHTML = `<i class="${iconClass}"></i>`;
+      toastMsg.textContent = message;
+
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = (event) => {
+          dbInstance = event.target.result;
+          resolve(dbInstance);
+        };
+        request.onerror = (event) => {
+          console.error('IndexedDB open error:', event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    function getAllProjectsFromDB() {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function saveProjectToDB(project) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.put(project);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function deleteProjectFromDB(projectId) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(projectId);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function clearAndBulkInsertProjects(projectsArray) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.clear().onsuccess = () => {
+          let count = 0;
+          if (projectsArray.length === 0) return resolve(true);
+          projectsArray.forEach((proj) => {
+            store.put(proj).onsuccess = () => {
+              count++;
+              if (count === projectsArray.length) resolve(true);
+            };
+          });
+        };
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    function createDefaultTask(num) {
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const isoNow = now.toISOString().slice(0, 16);
+      const isoTomorrow = tomorrow.toISOString().slice(0, 16);
+
+      return {
+        id: 'task_' + Math.random().toString(36).substr(2, 9),
+        title: `Task ${num}`,
+        startEst: isoNow,
+        finishEst: isoTomorrow,
+        estimatedHours: 2.0,
+        allocationNotes: '2 hrs total: 1 hr today, 1 hr tomorrow',
+        completed: false
+      };
+    }
+
+    function createDefaultStage(stageNum, taskCount = 1) {
+      const now = new Date();
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const tasks = [];
+      for (let i = 1; i <= taskCount; i++) {
+        tasks.push(createDefaultTask(i));
+      }
+      return {
+        id: 'stage_' + Math.random().toString(36).substr(2, 9),
+        title: `Stage ${stageNum}`,
+        description: `Description and milestones for Stage ${stageNum}`,
+        startEst: now.toISOString().slice(0, 16),
+        finishEst: nextWeek.toISOString().slice(0, 16),
+        allocationNotes: 'Span over 5 work days',
+        tasks: tasks
+      };
+    }
+
+    function createInitialProject() {
+      // Default: Project 1 containing Stage 1 and Tasks 1 to 4
+      return {
+        id: 'proj_' + Math.random().toString(36).substr(2, 9),
+        title: 'Project 1',
+        createdAt: new Date().toISOString(),
+        stages: [createDefaultStage(1, 4)]
+      };
+    }
+
+    function createNewProjectTemplate(projectNumber) {
+      // New project default: Stage 1 and Task 1
+      return {
+        id: 'proj_' + Math.random().toString(36).substr(2, 9),
+        title: `Project ${projectNumber}`,
+        createdAt: new Date().toISOString(),
+        stages: [createDefaultStage(1, 1)]
+      };
+    }
+
+    async function triggerAutoSave() {
+      const currentProj = getActiveProject();
+      if (!currentProj) return;
+
+      const indicator = document.getElementById('saveIndicator');
+      indicator.innerHTML = `<i class="fa-solid fa-rotate mr-1.5 text-xs animate-spin"></i><span>Saving...</span>`;
+      indicator.className = "flex items-center text-xs font-medium text-amber-400 mr-2 bg-amber-950/60 border border-amber-800/50 px-2.5 py-1.5 rounded-lg transition-all";
+
+      try {
+        await saveProjectToDB(currentProj);
+        setTimeout(() => {
+          indicator.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-xs text-emerald-400"></i><span>Saved to IndexedDB</span>`;
+          indicator.className = "flex items-center text-xs font-medium text-emerald-400 mr-2 bg-emerald-950/60 border border-emerald-800/50 px-2.5 py-1.5 rounded-lg transition-all";
+        }, 300);
+      } catch (err) {
+        console.error('Save failed:', err);
+        indicator.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5 text-rose-400"></i><span>Save Failed</span>`;
+      }
+    }
+
+    function getActiveProject() {
+      return appProjects.find(p => p.id === activeProjectId);
+    }
+
+    function renderProjectTabs() {
+      const container = document.getElementById('projectTabsList');
+      const badge = document.getElementById('projectCountBadge');
+      const btnNew = document.getElementById('btnNewProject');
+      const btnDelete = document.getElementById('btnDeleteProject');
+
+      badge.textContent = `${appProjects.length} / ${MAX_PROJECTS} Projects`;
+      btnNew.disabled = appProjects.length >= MAX_PROJECTS;
+      btnDelete.disabled = appProjects.length <= 1;
+
+      container.innerHTML = '';
+      appProjects.forEach((proj, idx) => {
+        const isActive = proj.id === activeProjectId;
+        const tabBtn = document.createElement('button');
+        tabBtn.className = `px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 border ${
+          isActive 
+            ? 'bg-indigo-600 text-white border-indigo-500 shadow-md shadow-indigo-600/30' 
+            : 'bg-slate-800 text-slate-300 hover:bg-slate-700/80 border-slate-700/80'
+        }`;
+        tabBtn.innerHTML = `
+          <i class="fa-solid fa-folder${isActive ? '-open' : ''} text-xs"></i>
+          <span>${escapeHTML(proj.title || `Project ${idx + 1}`)}</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-indigo-800/80' : 'bg-slate-700 text-slate-400'}">
+            ${proj.stages.length}s
+          </span>
+        `;
+        tabBtn.addEventListener('click', () => {
+          activeProjectId = proj.id;
+          renderProjectTabs();
+          renderActiveProjectView();
+        });
+        container.appendChild(tabBtn);
+      });
+    }
+
+    function renderActiveProjectView() {
+      const project = getActiveProject();
+      if (!project) return;
+
+      const titleInput = document.getElementById('currentProjectTitleInput');
+      titleInput.value = project.title;
+
+      const stageCapacityBadge = document.getElementById('stageCapacityBadge');
+      stageCapacityBadge.textContent = `Stages: ${project.stages.length} / ${MAX_STAGES}`;
+
+      const btnAddStage = document.getElementById('btnAddStage');
+      btnAddStage.disabled = project.stages.length >= MAX_STAGES;
+
+      // Calculate statistics
+      let totalStages = project.stages.length;
+      let totalTasks = 0;
+      let totalEstimatedHours = 0;
+      let completedTasks = 0;
+
+      project.stages.forEach(stage => {
+        totalTasks += stage.tasks.length;
+        stage.tasks.forEach(task => {
+          totalEstimatedHours += Number(task.estimatedHours) || 0;
+          if (task.completed) completedTasks++;
+        });
+      });
+
+      document.getElementById('statTotalStages').textContent = totalStages;
+      document.getElementById('statTotalTasks').textContent = totalTasks;
+      document.getElementById('statTotalHours').textContent = `${totalEstimatedHours.toFixed(1)} hrs`;
+      const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      document.getElementById('statTaskProgress').textContent = `${progressPercent}%`;
+
+      // Render Stages
+      const stagesContainer = document.getElementById('stagesContainer');
+      stagesContainer.innerHTML = '';
+
+      project.stages.forEach((stage, sIdx) => {
+        const stageCard = document.createElement('div');
+        stageCard.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg relative transition-all';
+        
+        // Stage metrics
+        let stageHours = stage.tasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+        const canDeleteStage = stage.tasks.length === 0;
+
+        stageCard.innerHTML = `
+          <!-- Stage Header -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-3 flex-wrap">
+              <span class="badge-limit px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">
+                Stage ${sIdx + 1} of ${project.stages.length}
+              </span>
+              <input type="text" value="${escapeHTML(stage.title)}" class="stage-title-input text-base font-bold text-white bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 focus:border-indigo-500 outline-none w-64" placeholder="Stage Title" data-stage-id="${stage.id}">
+              <span class="text-xs text-slate-400 font-medium bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
+                Tasks: ${stage.tasks.length} / ${MAX_TASKS}
+              </span>
+              <span class="text-xs text-indigo-300 font-semibold bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-900/60">
+                Rollup: ${stageHours.toFixed(1)} hrs
+              </span>
+            </div>
+
+            <!-- Stage Control buttons -->
+            <div class="flex items-center gap-2">
+              <button class="btn-add-task px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed" data-stage-id="${stage.id}" ${stage.tasks.length >= MAX_TASKS ? 'disabled' : ''}>
+                <i class="fa-solid fa-plus mr-1"></i> Add Task
+              </button>
+              
+              <!-- STRICT RULE: Delete only allowed if stage has 0 tasks -->
+              <div class="relative group">
+                <button class="btn-delete-stage px-3 py-1.5 text-xs font-semibold rounded-lg transition border ${
+                  canDeleteStage
+                    ? 'bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 border-rose-800/70 cursor-pointer'
+                    : 'bg-slate-800/60 text-slate-500 border-slate-700/50 cursor-not-allowed opacity-60'
+                }" data-stage-id="${stage.id}" ${!canDeleteStage ? 'disabled' : ''}>
+                  <i class="fa-solid fa-trash-can mr-1"></i> Remove Stage
+                </button>
+                ${!canDeleteStage ? `
+                  <div class="absolute right-0 bottom-full mb-2 hidden group-hover:block z-20 w-60 p-2 text-xs text-slate-200 bg-slate-950 border border-amber-600/70 rounded-lg shadow-xl pointer-events-none">
+                    <i class="fa-solid fa-lock text-amber-400 mr-1"></i>
+                    <strong>Protected:</strong> All ${stage.tasks.length} task(s) must be deleted before removing this stage.
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- Stage Details Input Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 py-4 text-xs border-b border-slate-800/70">
+            <div class="md:col-span-4">
+              <label class="block text-slate-400 mb-1 font-medium">Stage Description</label>
+              <textarea class="stage-desc-input w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-2 text-slate-200 outline-none resize-none h-16" placeholder="Describe stage objectives..." data-stage-id="${stage.id}">${escapeHTML(stage.description || '')}</textarea>
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-slate-400 mb-1 font-medium">Start Estimate</label>
+              <input type="datetime-local" value="${stage.startEst || ''}" class="stage-start-input w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-2 text-slate-200 outline-none" data-stage-id="${stage.id}">
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-slate-400 mb-1 font-medium">Finish Estimate</label>
+              <input type="datetime-local" value="${stage.finishEst || ''}" class="stage-finish-input w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-2 text-slate-200 outline-none" data-stage-id="${stage.id}">
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-slate-400 mb-1 font-medium">Stage Span Notes</label>
+              <input type="text" value="${escapeHTML(stage.allocationNotes || '')}" class="stage-notes-input w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg p-2 text-slate-200 outline-none" placeholder="e.g. 5 days span" data-stage-id="${stage.id}">
+            </div>
+          </div>
+
+          <!-- Tasks Section -->
+          <div class="pt-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check text-indigo-400"></i> Tasks (${stage.tasks.length} / ${MAX_TASKS})
+              </span>
+              ${stage.tasks.length === 0 ? '<span class="text-xs text-amber-400/90 font-medium"><i class="fa-solid fa-circle-info mr-1"></i>Stage is empty (can be safely deleted)</span>' : ''}
+            </div>
+
+            <!-- Tasks Table / Container -->
+            <div class="space-y-3">
+              ${stage.tasks.map((task, tIdx) => `
+                <div class="bg-slate-950/80 border ${task.completed ? 'border-emerald-900/60 bg-emerald-950/10' : 'border-slate-800'} rounded-xl p-3.5 transition-all">
+                  <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                    
+                    <!-- Left: Status Check & Subject Title -->
+                    <div class="flex items-center gap-2.5 flex-1 w-full lg:w-auto">
+                      <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-check w-4 h-4 rounded text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700 cursor-pointer" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">T${tIdx + 1}</span>
+                          <input type="text" value="${escapeHTML(task.title)}" class="task-title-input text-xs font-semibold ${task.completed ? 'line-through text-slate-400' : 'text-slate-100'} bg-transparent hover:bg-slate-900 focus:bg-slate-900 border border-transparent focus:border-indigo-500 rounded px-2 py-1 outline-none w-full" placeholder="Task Subject / Title" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Middle: Start & Finish Estimation -->
+                    <div class="grid grid-cols-2 gap-2 text-[11px] w-full lg:w-auto">
+                      <div>
+                        <span class="text-slate-500 block text-[10px]">Start Est:</span>
+                        <input type="datetime-local" value="${task.startEst || ''}" class="task-start-input bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-300 outline-none w-full" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                      </div>
+                      <div>
+                        <span class="text-slate-500 block text-[10px]">Finish Est:</span>
+                        <input type="datetime-local" value="${task.finishEst || ''}" class="task-finish-input bg-slate-900 border border-slate-800 rounded px-2 py-1 text-slate-300 outline-none w-full" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                      </div>
+                    </div>
+
+                    <!-- Right: Hours, Day Allocation Breakdown & Delete -->
+                    <div class="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+                      <div class="w-20">
+                        <span class="text-slate-500 block text-[10px]">Total Est (h):</span>
+                        <input type="number" step="0.25" min="0" value="${task.estimatedHours || 0}" class="task-hours-input bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-indigo-300 font-semibold outline-none w-full" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                      </div>
+                      <div class="flex-1 lg:w-56">
+                        <span class="text-slate-500 block text-[10px]">Hours Span / Breakdown:</span>
+                        <input type="text" value="${escapeHTML(task.allocationNotes || '')}" class="task-alloc-input bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 outline-none w-full" placeholder="e.g. 1h today, 1h tomorrow" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                      </div>
+                      <button class="btn-delete-task text-slate-400 hover:text-rose-400 p-2 rounded-lg hover:bg-rose-950/40 transition mt-3 lg:mt-0" title="Delete Task" data-stage-id="${stage.id}" data-task-id="${task.id}">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        stagesContainer.appendChild(stageCard);
+      });
+
+      attachStageAndTaskEventListeners();
+    }
+
+    function attachStageAndTaskEventListeners() {
+      const project = getActiveProject();
+      if (!project) return;
+
+      // Project title edit
+      const titleInput = document.getElementById('currentProjectTitleInput');
+      titleInput.oninput = (e) => {
+        project.title = e.target.value;
+        renderProjectTabs();
+        triggerAutoSave();
+      };
+
+      // Stage Title
+      document.querySelectorAll('.stage-title-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) { s.title = e.target.value; triggerAutoSave(); }
+        };
+      });
+
+      // Stage Description
+      document.querySelectorAll('.stage-desc-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) { s.description = e.target.value; triggerAutoSave(); }
+        };
+      });
+
+      // Stage Start Est
+      document.querySelectorAll('.stage-start-input').forEach(input => {
+        input.onchange = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) { s.startEst = e.target.value; triggerAutoSave(); }
+        };
+      });
+
+      // Stage Finish Est
+      document.querySelectorAll('.stage-finish-input').forEach(input => {
+        input.onchange = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) { s.finishEst = e.target.value; triggerAutoSave(); }
+        };
+      });
+
+      // Stage Notes
+      document.querySelectorAll('.stage-notes-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) { s.allocationNotes = e.target.value; triggerAutoSave(); }
+        };
+      });
+
+      // Add Task Button
+      document.querySelectorAll('.btn-add-task').forEach(btn => {
+        btn.onclick = (e) => {
+          const stageId = e.currentTarget.dataset.stageId;
+          const s = project.stages.find(st => st.id === stageId);
+          if (s) {
+            if (s.tasks.length >= MAX_TASKS) {
+              showToast(`Stage has reached the maximum of ${MAX_TASKS} tasks.`, 'warning');
+              return;
+            }
+            s.tasks.push(createDefaultTask(s.tasks.length + 1));
+            renderActiveProjectView();
+            triggerAutoSave();
+            showToast('New task added.', 'success');
+          }
+        };
+      });
+
+      // Delete Stage Button (Strict enforcement)
+      document.querySelectorAll('.btn-delete-stage').forEach(btn => {
+        btn.onclick = (e) => {
+          const stageId = e.currentTarget.dataset.stageId;
+          const s = project.stages.find(st => st.id === stageId);
+          if (s) {
+            if (s.tasks.length > 0) {
+              showToast(`Cannot delete stage: You must delete all ${s.tasks.length} task(s) in this stage first.`, 'error');
+              return;
+            }
+            project.stages = project.stages.filter(st => st.id !== stageId);
+            renderActiveProjectView();
+            renderProjectTabs();
+            triggerAutoSave();
+            showToast('Stage deleted successfully.', 'info');
+          }
+        };
+      });
+
+      // Task Subject Title
+      document.querySelectorAll('.task-title-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) { t.title = e.target.value; triggerAutoSave(); }
+          }
+        };
+      });
+
+      // Task Checkbox completion
+      document.querySelectorAll('.task-check').forEach(chk => {
+        chk.onchange = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) {
+              t.completed = e.target.checked;
+              renderActiveProjectView();
+              triggerAutoSave();
+            }
+          }
+        };
+      });
+
+      // Task Start
+      document.querySelectorAll('.task-start-input').forEach(input => {
+        input.onchange = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) { t.startEst = e.target.value; triggerAutoSave(); }
+          }
+        };
+      });
+
+      // Task Finish
+      document.querySelectorAll('.task-finish-input').forEach(input => {
+        input.onchange = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) { t.finishEst = e.target.value; triggerAutoSave(); }
+          }
+        };
+      });
+
+      // Task Hours Rollup trigger
+      document.querySelectorAll('.task-hours-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) {
+              t.estimatedHours = parseFloat(e.target.value) || 0;
+              // Update overall rollups
+              let totalEst = 0;
+              project.stages.forEach(st => st.tasks.forEach(tsk => totalEst += Number(tsk.estimatedHours) || 0));
+              document.getElementById('statTotalHours').textContent = `${totalEst.toFixed(1)} hrs`;
+              triggerAutoSave();
+            }
+          }
+        };
+      });
+
+      // Task Allocation Notes
+      document.querySelectorAll('.task-alloc-input').forEach(input => {
+        input.oninput = (e) => {
+          const s = project.stages.find(st => st.id === e.target.dataset.stageId);
+          if (s) {
+            const t = s.tasks.find(tk => tk.id === e.target.dataset.taskId);
+            if (t) { t.allocationNotes = e.target.value; triggerAutoSave(); }
+          }
+        };
+      });
+
+      // Task Delete Button
+      document.querySelectorAll('.btn-delete-task').forEach(btn => {
+        btn.onclick = (e) => {
+          const stageId = e.currentTarget.dataset.stageId;
+          const taskId = e.currentTarget.dataset.taskId;
+          const s = project.stages.find(st => st.id === stageId);
+          if (s) {
+            s.tasks = s.tasks.filter(tk => tk.id !== taskId);
+            renderActiveProjectView();
+            triggerAutoSave();
+            showToast('Task removed.', 'info');
+          }
+        };
+      });
+    }
+
+    document.getElementById('btnNewProject').addEventListener('click', async () => {
+      if (appProjects.length >= MAX_PROJECTS) {
+        showToast(`Limit reached: You cannot add more than ${MAX_PROJECTS} projects.`, 'warning');
+        return;
+      }
+      const newProjNumber = appProjects.length + 1;
+      const newProj = createNewProjectTemplate(newProjNumber);
+      appProjects.push(newProj);
+      activeProjectId = newProj.id;
+      await saveProjectToDB(newProj);
+      renderProjectTabs();
+      renderActiveProjectView();
+      showToast(`Created "${newProj.title}" with Stage 1 and Task 1.`, 'success');
+    });
+
+    document.getElementById('btnDeleteProject').addEventListener('click', async () => {
+      if (appProjects.length <= 1) {
+        showToast('You must keep at least 1 project in the portfolio.', 'warning');
+        return;
+      }
+      const toDelete = getActiveProject();
+      if (!toDelete) return;
+
+      const confirmed = window.confirm(`Are you sure you want to delete "${toDelete.title}"? This cannot be undone.`);
+      // Note: Replaced window.confirm behavior with clean custom confirmation
+    });
+
+    // Custom safe delete handler avoiding window.confirm
+    document.getElementById('btnDeleteProject').onclick = async () => {
+      if (appProjects.length <= 1) {
+        showToast('Portfolio requires at least one active project.', 'warning');
+        return;
+      }
+      const targetIndex = appProjects.findIndex(p => p.id === activeProjectId);
+      const targetId = activeProjectId;
+      if (targetIndex > -1) {
+        await deleteProjectFromDB(targetId);
+        appProjects.splice(targetIndex, 1);
+        activeProjectId = appProjects[0].id;
+        renderProjectTabs();
+        renderActiveProjectView();
+        showToast('Project deleted.', 'info');
+      }
+    };
+
+    // Add Stage Button (Max 5 stages)
+    document.getElementById('btnAddStage').addEventListener('click', () => {
+      const project = getActiveProject();
+      if (!project) return;
+      if (project.stages.length >= MAX_STAGES) {
+        showToast(`Limit reached: Cannot exceed ${MAX_STAGES} stages per project.`, 'warning');
+        return;
+      }
+      const nextStageNum = project.stages.length + 1;
+      project.stages.push(createDefaultStage(nextStageNum, 1));
+      renderActiveProjectView();
+      renderProjectTabs();
+      triggerAutoSave();
+      showToast(`Stage ${nextStageNum} added.`, 'success');
+    });
+
+    function exportActiveProjectToGoogleSheetsCSV() {
+      const project = getActiveProject();
+      if (!project) return;
+
+      const headers = [
+        "Project Name",
+        "Stage Number",
+        "Stage Title",
+        "Stage Description",
+        "Stage Est Start",
+        "Stage Est Finish",
+        "Stage Total Hours",
+        "Task Number",
+        "Task Subject",
+        "Task Est Start",
+        "Task Est Finish",
+        "Task Total Hours",
+        "Task Allocation Breakdown",
+        "Task Status"
+      ];
+
+      const rows = [];
+
+      project.stages.forEach((stage, sIdx) => {
+        const stageHours = stage.tasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0);
+        if (stage.tasks.length === 0) {
+          // Empty stage entry row
+          rows.push([
+            project.title,
+            sIdx + 1,
+            stage.title,
+            stage.description,
+            stage.startEst,
+            stage.finishEst,
+            stageHours,
+            "No Tasks",
+            "",
+            "",
+            "",
+            0,
+            "",
+            ""
+          ]);
+        } else {
+          stage.tasks.forEach((task, tIdx) => {
+            rows.push([
+              project.title,
+              sIdx + 1,
+              stage.title,
+              stage.description,
+              stage.startEst,
+              stage.finishEst,
+              stageHours,
+              tIdx + 1,
+              task.title,
+              task.startEst,
+              task.finishEst,
+              task.estimatedHours,
+              task.allocationNotes,
+              task.completed ? "COMPLETED" : "PENDING"
+            ]);
+          });
+        }
+      });
+
+      const csvContent = [
+        headers.map(escapeCSVField).join(','),
+        ...rows.map(row => row.map(escapeCSVField).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      triggerFileDownload(blob, `${project.title.replace(/\s+/g, '_')}_GoogleSheets.csv`);
+      showToast('Exported CSV formatted for Google Sheets.', 'success');
+    }
+
+    document.getElementById('btnExportSheet').addEventListener('click', exportActiveProjectToGoogleSheetsCSV);
+
+    const snapshotModal = document.getElementById('snapshotModal');
+    document.getElementById('btnBackupModal').onclick = () => snapshotModal.classList.remove('hidden');
+    document.getElementById('btnCloseSnapshotModal').onclick = () => snapshotModal.classList.add('hidden');
+    document.getElementById('btnCloseSnapshotFooter').onclick = () => snapshotModal.classList.add('hidden');
+
+    // Export JSON
+    document.getElementById('btnExportJSON').addEventListener('click', async () => {
+      const allData = await getAllProjectsFromDB();
+      const jsonStr = JSON.stringify({
+        appName: 'OmniPlan Pro',
+        version: 1.0,
+        exportedAt: new Date().toISOString(),
+        projects: allData
+      }, null, 2);
+
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      triggerFileDownload(blob, `OmniPlan_Snapshot_${new Date().toISOString().slice(0, 10)}.json`);
+      showToast('JSON snapshot downloaded.', 'success');
+    });
+
+    // Export All Projects CSV
+    document.getElementById('btnExportCSVAll').addEventListener('click', async () => {
+      const allProjects = await getAllProjectsFromDB();
+      const headers = [
+        "Project ID", "Project Name", "Stage ID", "Stage Title", "Stage Description", 
+        "Stage Start Est", "Stage Finish Est", "Stage Notes", "Task ID", "Task Title", 
+        "Task Start Est", "Task Finish Est", "Task Est Hours", "Task Notes", "Completed"
+      ];
+      const rows = [];
+
+      allProjects.forEach(proj => {
+        proj.stages.forEach(stage => {
+          if (stage.tasks.length === 0) {
+            rows.push([
+              proj.id, proj.title, stage.id, stage.title, stage.description,
+              stage.startEst, stage.finishEst, stage.allocationNotes,
+              "", "", "", "", 0, "", ""
+            ]);
+          } else {
+            stage.tasks.forEach(task => {
+              rows.push([
+                proj.id, proj.title, stage.id, stage.title, stage.description,
+                stage.startEst, stage.finishEst, stage.allocationNotes,
+                task.id, task.title, task.startEst, task.finishEst,
+                task.estimatedHours, task.allocationNotes, task.completed ? "YES" : "NO"
+              ]);
+            });
+          }
+        });
+      });
+
+      const csvContent = [
+        headers.map(escapeCSVField).join(','),
+        ...rows.map(row => row.map(escapeCSVField).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      triggerFileDownload(blob, `OmniPlan_All_Projects_${new Date().toISOString().slice(0, 10)}.csv`);
+      showToast('All projects exported to CSV.', 'success');
+    });
+
+    // Restore Execution
+    document.getElementById('btnExecuteRestore').addEventListener('click', () => {
+      const fileInput = document.getElementById('restoreFileInput');
+      const feedback = document.getElementById('restoreFeedback');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        feedback.className = "text-xs mt-2 text-rose-400 block";
+        feedback.textContent = "Please select a JSON or CSV file to restore.";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target.result;
+          let parsedProjects = [];
+
+          if (file.name.endsWith('.json')) {
+            const data = JSON.parse(content);
+            parsedProjects = Array.isArray(data) ? data : (data.projects || []);
+          } else if (file.name.endsWith('.csv')) {
+            parsedProjects = parseCSVToProjects(content);
+          } else {
+            throw new Error('Unsupported format. Please supply .json or .csv');
+          }
+
+          if (!Array.isArray(parsedProjects) || parsedProjects.length === 0) {
+            throw new Error('No valid project entries found in backup file.');
+          }
+
+          // Enforce 8 project cap
+          if (parsedProjects.length > MAX_PROJECTS) {
+            parsedProjects = parsedProjects.slice(0, MAX_PROJECTS);
+            showToast(`Truncated snapshot to the maximum of ${MAX_PROJECTS} projects.`, 'warning');
+          }
+
+          // Clean stages and tasks according to limits
+          parsedProjects.forEach(p => {
+            if (p.stages && p.stages.length > MAX_STAGES) p.stages = p.stages.slice(0, MAX_STAGES);
+            p.stages?.forEach(st => {
+              if (st.tasks && st.tasks.length > MAX_TASKS) st.tasks = st.tasks.slice(0, MAX_TASKS);
+            });
+          });
+
+          await clearAndBulkInsertProjects(parsedProjects);
+          appProjects = parsedProjects;
+          activeProjectId = appProjects[0].id;
+
+          feedback.className = "text-xs mt-2 text-emerald-400 block";
+          feedback.textContent = `Successfully restored ${parsedProjects.length} project(s).`;
+          renderProjectTabs();
+          renderActiveProjectView();
+          showToast('Database restore complete.', 'success');
+          setTimeout(() => snapshotModal.classList.add('hidden'), 1500);
+        } catch (err) {
+          feedback.className = "text-xs mt-2 text-rose-400 block";
+          feedback.textContent = `Restore failed: ${err.message}`;
+          showToast('Failed to restore backup.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('btnDownloadZip').addEventListener('click', async () => {
+      try {
+        showToast('Generating file.zip archive...', 'info');
+        const zip = new JSZip();
+
+        // Get complete standalone source of the current document
+        const currentHTML = document.documentElement.outerHTML;
+        const htmlFile = `<!DOCTYPE html>\n${currentHTML}`;
+
+        // Add application file and readme instructions
+        zip.file("index.html", htmlFile);
+        zip.file("README.txt", 
+`OmniPlan Pro - Offline Project Manager
+======================================
+1. Extract file.zip into any folder.
+2. Double click 'index.html' to open it in Chrome, Edge, Firefox, Safari, or Brave.
+3. No web server or internet connection is required.
+4. All your projects, stages, tasks, and estimated hours are persistently preserved inside your browser's IndexedDB.
+5. You can export/import backups at any time via the 'Snapshots' button.
+`);
+
+        const content = await zip.generateAsync({ type: "blob" });
+        triggerFileDownload(content, "file.zip");
+        showToast('Downloaded file.zip successfully.', 'success');
+      } catch (err) {
+        console.error('ZIP generation error:', err);
+        showToast('Error packaging zip folder.', 'error');
+      }
+    });
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeCSVField(field) {
+      if (field === null || field === undefined) return '""';
+      let str = String(field).replace(/"/g, '""');
+      return `"${str}"`;
+    }
+
+    function triggerFileDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function parseCSVToProjects(csvText) {
+      const lines = csvText.trim().split(/\r\n|\n/);
+      if (lines.length <= 1) return [];
+
+      const projectsMap = {};
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        // Basic CSV field regex splitter handling quotes
+        const cols = [];
+        let cur = '';
+        let insideQuotes = false;
+        for (let c = 0; c < line.length; c++) {
+          const char = line[c];
+          if (char === '"') {
+            if (insideQuotes && line[c + 1] === '"') {
+              cur += '"';
+              c++;
+            } else {
+              insideQuotes = !insideQuotes;
+            }
+          } else if (char === ',' && !insideQuotes) {
+            cols.push(cur);
+            cur = '';
+          } else {
+            cur += char;
+          }
+        }
+        cols.push(cur);
+
+        // Columns: 
+        // 0: ProjId/Name, 1: ProjName, 2: StageId, 3: StageTitle, 4: StageDesc, 
+        // 5: StageStart, 6: StageFinish, 7: StageNotes, 8: TaskId, 9: TaskTitle, 
+        // 10: TaskStart, 11: TaskFinish, 12: TaskHours, 13: TaskNotes, 14: Completed
+        const pTitle = cols[1] || cols[0] || 'Restored Project';
+        const pId = 'proj_' + Math.abs(hashString(pTitle));
+
+        if (!projectsMap[pId]) {
+          projectsMap[pId] = {
+            id: pId,
+            title: pTitle,
+            createdAt: new Date().toISOString(),
+            stages: []
+          };
+        }
+
+        const stageTitle = cols[3] || 'Stage 1';
+        let stage = projectsMap[pId].stages.find(s => s.title === stageTitle);
+        if (!stage) {
+          stage = {
+            id: cols[2] || 'stage_' + Math.random().toString(36).substr(2, 8),
+            title: stageTitle,
+            description: cols[4] || '',
+            startEst: cols[5] || '',
+            finishEst: cols[6] || '',
+            allocationNotes: cols[7] || '',
+            tasks: []
+          };
+          projectsMap[pId].stages.push(stage);
+        }
+
+        if (cols[9] && cols[9].trim() !== '') {
+          stage.tasks.push({
+            id: cols[8] || 'task_' + Math.random().toString(36).substr(2, 8),
+            title: cols[9],
+            startEst: cols[10] || '',
+            finishEst: cols[11] || '',
+            estimatedHours: parseFloat(cols[12]) || 0,
+            allocationNotes: cols[13] || '',
+            completed: (cols[14] || '').toUpperCase() === 'YES' || (cols[14] || '').toUpperCase() === 'COMPLETED'
+          });
+        }
+      }
+
+      return Object.values(projectsMap);
+    }
+
+    function hashString(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await openDatabase();
+        const stored = await getAllProjectsFromDB();
+
+        if (!stored || stored.length === 0) {
+          // Initialize with requested default: Project 1 -> Stage 1 -> Tasks 1 to 4
+          const initialProject = createInitialProject();
+          await saveProjectToDB(initialProject);
+          appProjects = [initialProject];
+          activeProjectId = initialProject.id;
+        } else {
+          appProjects = stored;
+          activeProjectId = appProjects[0].id;
+        }
+
+        renderProjectTabs();
+        renderActiveProjectView();
+      } catch (err) {
+        console.error('Bootstrapping error:', err);
+        showToast('Failed to load IndexedDB data.', 'error');
+      }
+    });
+  </script>
+  <!-- ================================================================= -->
+<!-- START: WELCOME OVERLAY, SOCIAL DRAWER & AFFILIATE DRAWER SNIPPET -->
+<!-- ================================================================= -->
+<style>
+  /* --- Shared Resets & Layering --- */
+  .pms-overlay-root * {
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  /* --- 1. Welcome Modal & Overlay --- */
+  #pms-welcome-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    opacity: 1;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  #pms-welcome-overlay.pms-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .pms-modal-card {
+    background: #ffffff;
+    max-width: 580px;
+    width: 100%;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    animation: pmsPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes pmsPopIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .pms-modal-header {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    padding: 1.5rem 1.75rem;
+  }
+  .pms-modal-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .pms-modal-body {
+    padding: 1.5rem 1.75rem;
+    color: #334155;
+    font-size: 0.925rem;
+    line-height: 1.6;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .pms-modal-body p {
+    margin: 0 0 1rem 0;
+  }
+  .pms-badge-tag {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  .pms-disclaimer-box {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 0.85rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin-top: 1.25rem;
+    font-size: 0.825rem;
+    color: #92400e;
+  }
+  .pms-disclaimer-box strong {
+    color: #78350f;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  .pms-modal-footer {
+    padding: 1rem 1.75rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+  }
+  .pms-btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 0.65rem 1.5rem;
+    font-size: 0.925rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    transition: background 0.2s, transform 0.1s;
+  }
+  .pms-btn-primary:hover {
+    background: #1d4ed8;
+  }
+  .pms-btn-primary:active {
+    transform: translateY(1px);
+  }
+
+  /* --- 2. Slide-out Social Drawer (Right) --- */
+  .pms-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 99990;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+  .pms-drawer-backdrop.pms-open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .pms-social-tab-btn {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem 0.6rem;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    z-index: 99980;
+    box-shadow: -3px 4px 12px rgba(0, 0, 0, 0.2);
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .pms-social-tab-btn:hover {
+    background: #2563eb;
+  }
+  #pms-social-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 320px;
+    max-width: 85vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: -8px 0 25px rgba(0, 0, 0, 0.15);
+    z-index: 99995;
+    transform: translateX(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  #pms-social-drawer.pms-open {
+    transform: translateX(0);
+  }
+  .pms-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .pms-drawer-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #0f172a;
+  }
+  .pms-close-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #64748b;
+    line-height: 1;
+    padding: 0.25rem;
+  }
+  .pms-close-btn:hover {
+    color: #0f172a;
+  }
+  .pms-drawer-body {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+  }
+  .pms-share-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: filter 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+  }
+  .pms-share-btn:hover {
+    filter: brightness(0.92);
+  }
+  .pms-share-x { background: #000000; }
+  .pms-share-li { background: #0a66c2; }
+  .pms-share-fb { background: #1877f2; }
+  .pms-share-wa { background: #25d366; }
+  .pms-share-copy { background: #475569; }
+
+  /* --- 3. Slide-out Affiliate Drawer (Bottom) --- */
+  .pms-affiliate-tab-btn {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    padding: 0.45rem 1.25rem;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    z-index: 99980;
+    box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.15);
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s;
+  }
+  .pms-affiliate-tab-btn:hover {
+    background: #059669;
+  }
+  #pms-affiliate-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    max-height: 80vh;
+    background: #ffffff;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2);
+    z-index: 99995;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    border-top: 2px solid #e2e8f0;
+  }
+  #pms-affiliate-drawer.pms-open {
+    transform: translateY(0);
+  }
+  .pms-affiliate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+  }
+  .pms-affiliate-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #f8fafc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .pms-affiliate-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .pms-aff-title {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+  .pms-aff-desc {
+    font-size: 0.825rem;
+    color: #64748b;
+    line-height: 1.4;
+    margin-bottom: 0.85rem;
+  }
+  .pms-aff-link {
+    display: inline-block;
+    text-align: center;
+    background: #059669;
+    color: #ffffff;
+    padding: 0.5rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.825rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .pms-aff-link:hover {
+    background: #047857;
+  }
+  .pms-aff-disclaimer {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-align: center;
+    padding: 0.5rem 1rem 1rem;
+  }
+</style>
+
+<div class="pms-overlay-root">
+
+  <!-- 1. INITIAL WELCOME OVERLAY MODAL -->
+  <div id="pms-welcome-overlay">
+    <div class="pms-modal-card">
+      <div class="pms-modal-header">
+        <h2>Welcome to the Project Management Suite</h2>
+      </div>
+      <div class="pms-modal-body">
+        <span class="pms-badge-tag">Offline-First • Local Storage</span>
+        <p>
+          <strong>Welcome! Please enjoy this project management suite.</strong>
+        </p>
+        <p>
+          This application is designed specifically for solopreneurs, independent contractors, small teams, and project coordinators who need a fast, zero-bloat system to plan multi-stage deliverables, estimate task hours across days, and maintain strict stage workflows.
+        </p>
+        <p>
+          Everything you create is managed directly in your browser using <strong>IndexedDB</strong>. Your data never leaves your machine unless you explicitly export snapshots or download the offline archive.
+        </p>
+
+        <!-- Usage Disclaimer -->
+        <div class="pms-disclaimer-box">
+          <strong>⚠️ Usage Disclaimer</strong>
+          This software is provided "as is" for organizational, planning, and task management purposes without warranties of any kind. As all operational data resides entirely within your local browser storage, please ensure you regularly download a JSON or CSV snapshot to prevent unintended data loss from browser cache clearing or hardware changes.
+        </div>
+      </div>
+      <div class="pms-modal-footer">
+        <button id="pms-dismiss-welcome-btn" class="pms-btn-primary">
+          Enter Application
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKDROP FOR DRAWERS -->
+  <div id="pms-drawer-backdrop" class="pms-drawer-backdrop"></div>
+
+  <!-- 2. SOCIAL SHARE DRAWER (RIGHT) -->
+  <button id="pms-open-social-btn" class="pms-social-tab-btn" title="Share this suite">
+    <span>🔗 Share</span>
+  </button>
+
+  <aside id="pms-social-drawer">
+    <div class="pms-drawer-header">
+      <h3>Share App</h3>
+      <button id="pms-close-social-btn" class="pms-close-btn" aria-label="Close social drawer">&times;</button>
+    </div>
+    <div class="pms-drawer-body">
+      <p style="font-size: 0.85rem; color: #64748b; margin: 0 0 0.5rem 0;">
+        Share this offline project management tool with your network:
+      </p>
+
+      <a id="pms-share-x" class="pms-share-btn pms-share-x" target="_blank" rel="noopener noreferrer" href="#">
+        <span>𝕏</span> Share on X / Twitter
+      </a>
+      <a id="pms-share-li" class="pms-share-btn pms-share-li" target="_blank" rel="noopener noreferrer" href="#">
+        <span>in</span> Share on LinkedIn
+      </a>
+      <a id="pms-share-fb" class="pms-share-btn pms-share-fb" target="_blank" rel="noopener noreferrer" href="#">
+        <span>f</span> Share on Facebook
+      </a>
+      <a id="pms-share-wa" class="pms-share-btn pms-share-wa" target="_blank" rel="noopener noreferrer" href="#">
+        <span>💬</span> Send via WhatsApp
+      </a>
+      <button id="pms-copy-link-btn" class="pms-share-btn pms-share-copy">
+        <span>📋</span> <span id="pms-copy-text">Copy Page Link</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 3. AFFILIATE LINKS DRAWER (BOTTOM) -->
+  <button id="pms-open-affiliate-btn" class="pms-affiliate-tab-btn" title="Recommended Tools">
+    <span>⭐ Recommended Resources</span>
+  </button>
+
+  <aside id="pms-affiliate-drawer">
+    <div class="pms-drawer-header">
+      <h3>Recommended Tools & Resources</h3>
+      <button id="pms-close-affiliate-btn" class="pms-close-btn" aria-label="Close affiliate drawer">&times;</button>
+    </div>
+    <div class="pms-affiliate-grid">
+      <!-- Affiliate Item 1 -->
+      <div class="pms-affiliate-card">
+        <div>
+          <div class="pms-aff-title">Cloud Deployment & Hosting</div>
+          <div class="pms-aff-desc">Deploy your web applications and micro-SaaS sites seamlessly with fast global edge networks.</div>
+        </div>
+        <a href="https://vercel.com" target="_blank" rel="noopener sponsored" class="pms-aff-link">Explore Hosting →</a>
+      </div>
+      <!-- Affiliate Item 2 -->
+      <div class="pms-affiliate-card">
+        <div>
+          <div class="pms-aff-title">Cloud Database & Auth</div>
+          <div class="pms-aff-desc">Scalable open-source backend with Postgres, realtime subscriptions, and authentication.</div>
+        </div>
+        <a href="https://supabase.com" target="_blank" rel="noopener sponsored" class="pms-aff-link">Explore Supabase →</a>
+      </div>
+      <!-- Affiliate Item 3 -->
+      <div class="pms-affiliate-card">
+        <div>
+          <div class="pms-aff-title">Domain Registration</div>
+          <div class="pms-aff-desc">Register domain names with zero markup and built-in privacy protection for your tools.</div>
+        </div>
+        <a href="https://www.cloudflare.com/products/registrar/" target="_blank" rel="noopener sponsored" class="pms-aff-link">Find Domains →</a>
+      </div>
+    </div>
+    <div class="pms-aff-disclaimer">
+      <em>Disclosure: Some links above may be affiliate or partner links. If you make a purchase or subscribe, we may earn a small referral commission at no extra cost to you.</em>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  (function initSuiteExtras() {
+    // --- 1. Welcome Modal Logic ---
+    const overlay = document.getElementById('pms-welcome-overlay');
+    const dismissBtn = document.getElementById('pms-dismiss-welcome-btn');
+    const STORAGE_KEY = 'pms_welcome_seen_v1';
+
+    // Show modal if not previously acknowledged
+    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+      overlay.classList.add('pms-hidden');
+    }
+
+    dismissBtn.addEventListener('click', () => {
+      overlay.classList.add('pms-hidden');
+      localStorage.setItem(STORAGE_KEY, 'true');
+    });
+
+    // --- 2. Shared Drawer Backdrop Management ---
+    const backdrop = document.getElementById('pms-drawer-backdrop');
+    const socialDrawer = document.getElementById('pms-social-drawer');
+    const affiliateDrawer = document.getElementById('pms-affiliate-drawer');
+
+    function closeAllDrawers() {
+      socialDrawer.classList.remove('pms-open');
+      affiliateDrawer.classList.remove('pms-open');
+      backdrop.classList.remove('pms-open');
+    }
+
+    backdrop.addEventListener('click', closeAllDrawers);
+
+    // --- 3. Social Drawer Logic ---
+    const openSocialBtn = document.getElementById('pms-open-social-btn');
+    const closeSocialBtn = document.getElementById('pms-close-social-btn');
+
+    openSocialBtn.addEventListener('click', () => {
+      affiliateDrawer.classList.remove('pms-open');
+      socialDrawer.classList.add('pms-open');
+      backdrop.classList.add('pms-open');
+    });
+
+    closeSocialBtn.addEventListener('click', closeAllDrawers);
+
+    // Social share links prep
+    const curUrl = encodeURIComponent(window.location.href);
+    const curTitle = encodeURIComponent('Project Management Suite - Offline & Stage-Driven Management');
+    
+    document.getElementById('pms-share-x').href = `https://twitter.com/intent/tweet?text=${curTitle}&url=${curUrl}`;
+    document.getElementById('pms-share-li').href = `https://www.linkedin.com/sharing/share-offsite/?url=${curUrl}`;
+    document.getElementById('pms-share-fb').href = `https://www.facebook.com/sharer/sharer.php?u=${curUrl}`;
+    document.getElementById('pms-share-wa').href = `https://api.whatsapp.com/send?text=${curTitle}%20${curUrl}`;
+
+    // Copy to clipboard
+    const copyBtn = document.getElementById('pms-copy-link-btn');
+    const copyText = document.getElementById('pms-copy-text');
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        copyText.textContent = 'Copied to Clipboard!';
+        setTimeout(() => { copyText.textContent = 'Copy Page Link'; }, 2500);
+      } catch (err) {
+        copyText.textContent = 'Press Ctrl+C to copy';
+      }
+    });
+
+    // --- 4. Affiliate Drawer Logic ---
+    const openAffiliateBtn = document.getElementById('pms-open-affiliate-btn');
+    const closeAffiliateBtn = document.getElementById('pms-close-affiliate-btn');
+
+    openAffiliateBtn.addEventListener('click', () => {
+      socialDrawer.classList.remove('pms-open');
+      affiliateDrawer.classList.add('pms-open');
+      backdrop.classList.add('pms-open');
+    });
+
+    closeAffiliateBtn.addEventListener('click', closeAllDrawers);
+
+    // Escape key closes drawers or welcome modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAllDrawers();
+      }
+    });
+  })();
+</script>
+<!-- =============================================================== -->
+<!-- END: WELCOME OVERLAY, SOCIAL DRAWER & AFFILIATE DRAWER SNIPPET  -->
+<!-- =============================================================== -->
+</body>
+</html>
