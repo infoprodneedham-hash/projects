@@ -65,6 +65,40 @@
           <span>Synced to IndexedDB</span>
         </div>
 
+        <!-- Button HTML -->
+<a 
+  href="https://support-lilac-omega.vercel.app/" 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  class="contact-dev-btn"
+>
+  Contact The Dev
+</a>
+
+<!-- Embedded CSS Styling -->
+<style>
+  .contact-dev-btn {
+    display: inline-block;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #ffffff;
+    background-color: #000000;
+    border: 1px solid #000000;
+    border-radius: 9999px; /* Fully rounded pill shape */
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Reverse color rollover */
+  .contact-dev-btn:hover {
+    background-color: #ffffff;
+    color: #000000;
+  }
+</style>
+
         <!-- Google Sheets Export -->
         <button id="btnExportSheet" class="inline-flex items-center px-3 py-1.5 text-xs font-medium bg-emerald-600/90 hover:bg-emerald-600 text-white rounded-lg transition shadow hover:shadow-emerald-500/20" title="Export current project formatted for Google Sheets">
           <i class="fa-solid fa-file-csv mr-1.5"></i> Sheets CSV
